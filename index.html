@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaf</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB, #E0F6FF); /* Sky-like background */
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .leaves {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .leaves>div {
+            position: absolute;
+            width: 180px; /* Increased size (2x) */
+            height: 300px; /* Increased size (2x) */
+            border-radius: 1px 300px 1px 300px;
+            transform-origin: bottom;
+            cursor: grab;
+            animation: sway 5s infinite ease-in-out; /* Animation for swaying */
+            z-index: 2; /* Leaves above keys */
+        }
+
+        /* Style for div1 (green leaves) */
+        .leaves>div.div1 {
+            background: #054c05; /* Green color */
+            box-shadow: 0px 0px 50px rgba(148, 245, 174, 0.5); /* Green shadow */
+        }
+
+        /* Style for div2 (reddish leaves) */
+        .leaves>div.div2 {
+            background: #ab1a3f; /* Reddish color */
+            box-shadow: 0px 0px 50px rgba(245, 148, 184, 0.5); /* Darker reddish shadow */
+        }
+
+        /* Keyframes for swaying animation */
+        @keyframes sway {
+            0%, 100% {
+                transform: rotate(-5deg);
+            }
+            50% {
+                transform: rotate(5deg);
+            }
+        }
+
+        #lock {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            background: #d00000;
+            border-radius: 10px;
+            transform: translate(-50%, -50%);
+            width: 70px; /* Smaller lock */
+            height: 80px;
+            font-size: 50px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            padding: 15px;
+            z-index: 10; /* Ensure lock is above leaves and keys */
+            transition: transform 0.5s ease-in-out;
+        }
+
+        .key {
+            position: absolute;
+            width: 80px; /* Smaller key */
+            height: 80px;
+            font-size: 40px;
+            z-index: 1; /* Keys behind leaves */
+            cursor: grab;
+            transition: z-index 0.3s ease-in-out; /* Smooth transition for z-index */
+        }
+
+        .key.dragging {
+            z-index: 20; /* Bring key above lock and leaves while dragging */
+        }
+
+        .unlocked {
+            transform: rotate(90deg) translate(-50%, -50%); /* Rotate the lock when unlocked */
+        }
+
+        .message {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: red;
+            z-index: 20; /* Ensure message is above everything */
+            display: none; /* Hidden by default */
+        }
+
+        .transition-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .transition-overlay.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="leaves"></div>
+        <div id="lock">🔒</div>
+        <div id="key1" class="key">🔑</div>
+        <div id="key2" class="key">🔑</div>
+        <div id="key3" class="key">🔑</div>
+        <div id="message" class="message">Key is wrong!</div>
+        <div class="transition-overlay"></div>
+    </div>
+
+    <script>
+        // Function to create a leaf with random rotation, animation delay, and a specified class
+        function createLeaf(top, left, className) {
+            const leaf = document.createElement('div');
+            const randomRotation = Math.random() * 360;
+            const animationDuration = (Math.random() * 5 + 3) + 's'; // Random duration between 3s and 8s
+            const animationDelay = (Math.random() * 5) + 's'; // Random delay between 0s and 5s
+
+            leaf.style.top = `${top}px`;
+            leaf.style.left = `${left}px`;
+            leaf.style.transform = `rotate(${randomRotation}deg)`;
+            leaf.style.animationDuration = animationDuration; // Set random duration
+            leaf.style.animationDelay = animationDelay; // Set random delay
+            leaf.classList.add(className); // Add the specified class
+
+            return leaf;
+        }
+
+        // Function to make an element draggable
+        function makeDraggable(element) {
+            let isDragging = false;
+            let offsetX, offsetY;
+
+            element.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                offsetX = e.clientX - element.getBoundingClientRect().left;
+                offsetY = e.clientY - element.getBoundingClientRect().top;
+                element.style.cursor = 'grabbing';
+                element.classList.add('dragging'); // Add class to bring key above lock and leaves
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    element.style.left = `${e.clientX - offsetX}px`;
+                    element.style.top = `${e.clientY - offsetY}px`;
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                element.style.cursor = 'grab';
+                element.classList.remove('dragging'); // Remove class to reset z-index
+            });
+        }
+
+        // Function to calculate the number of leaves needed to cover the screen
+        function calculateLeaves() {
+            const leafWidth = 180; /* Width of each leaf (2x size) */
+            const leafHeight = 300; /* Height of each leaf (2x size) */
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+
+            // Calculate the number of leaves per row and column
+            const leavesPerRow = Math.ceil(screenWidth / leafWidth);
+            const leavesPerColumn = Math.ceil(screenHeight / leafHeight);
+
+            return { leavesPerRow, leavesPerColumn };
+        }
+
+        // Function to set random positions for keys
+        function setRandomKeyPositions() {
+            const keys = document.querySelectorAll('.key');
+            keys.forEach(key => {
+                const randomTop = Math.random() * (window.innerHeight - 80); /* Subtract key height to keep it within view */
+                const randomLeft = Math.random() * (window.innerWidth - 80); /* Subtract key width to keep it within view */
+                key.style.top = `${randomTop}px`;
+                key.style.left = `${randomLeft}px`;
+            });
+        }
+
+        // Function to check if a key is over the lock
+        function isKeyOverLock(key, lock) {
+            const keyRect = key.getBoundingClientRect();
+            const lockRect = lock.getBoundingClientRect();
+
+            return (
+                keyRect.left < lockRect.right &&
+                keyRect.right > lockRect.left &&
+                keyRect.top < lockRect.bottom &&
+                keyRect.bottom > lockRect.top
+            );
+        }
+
+        // Function to unlock the lock
+        function unlockLock(lock) {
+            lock.classList.add('unlocked');
+            lock.textContent = '🔓'; /* Change lock to unlocked emoji */
+        }
+
+        // Function to show a message
+        function showMessage(message) {
+            const messageElement = document.getElementById('message');
+            messageElement.textContent = message;
+            messageElement.style.display = 'block';
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 2000); // Hide message after 2 seconds
+        }
+
+        // Function to open the new page with animation
+        function openNewPage() {
+            const overlay = document.querySelector('.transition-overlay');
+            overlay.classList.add('active');
+
+            setTimeout(() => {
+                window.location.href = 'KoreanHeartPropose.html'; // Replace with the actual URL of the new page
+            }, 1000); // Wait for the animation to complete
+        }
+
+        // Create leaves to cover the entire screen
+        const leavesContainer = document.querySelector('.leaves');
+        const { leavesPerRow, leavesPerColumn } = calculateLeaves();
+        const totalLeaves = leavesPerRow * leavesPerColumn;
+
+        // Create grid of leaves
+        for (let row = 0; row < leavesPerColumn; row++) {
+            for (let col = 0; col < leavesPerRow; col++) {
+                const top = row * 300; /* 300 is the height of each leaf (2x size) */
+                const left = col * 180; /* 180 is the width of each leaf (2x size) */
+                // Alternate classes for half of the leaves
+                const className = (row * leavesPerRow + col) < totalLeaves / 2 ? 'div1' : 'div2';
+                const leaf = createLeaf(top, left, className);
+                leavesContainer.appendChild(leaf);
+                makeDraggable(leaf);
+            }
+        }
+
+        // Add 20 more green leaves with random positions
+        for (let i = 0; i < 15; i++) {
+            const randomTop = Math.random() * window.innerHeight;
+            const randomLeft = Math.random() * window.innerWidth;
+            const leaf = createLeaf(randomTop, randomLeft, 'div1');
+            leavesContainer.appendChild(leaf);
+            makeDraggable(leaf);
+        }
+
+        // Add 20 more reddish leaves with random positions
+        for (let i = 0; i < 15; i++) {
+            const randomTop = Math.random() * window.innerHeight;
+            const randomLeft = Math.random() * window.innerWidth;
+            const leaf = createLeaf(randomTop, randomLeft, 'div2');
+            leavesContainer.appendChild(leaf);
+            makeDraggable(leaf);
+        }
+
+        // Set random positions for keys on page load
+        setRandomKeyPositions();
+
+        // Make all keys draggable
+        const keys = document.querySelectorAll('.key');
+        const lock = document.getElementById('lock');
+
+        // Randomly select the correct key
+        const correctKey = keys[Math.floor(Math.random() * keys.length)];
+        correctKey.dataset.correct = true; /* Mark the correct key */
+
+        keys.forEach(key => {
+            makeDraggable(key);
+
+            key.addEventListener('mouseup', () => {
+                if (isKeyOverLock(key, lock)) {
+                    if (key.dataset.correct) {
+                        unlockLock(lock);
+                        showMessage('Lock unlocked!');
+                        openNewPage(); // Open the new page with animation
+                    } else {
+                        showMessage('Key is wrong!');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Tree Leaf Animation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #87CEEB; /* Sky blue background */
+            perspective: 1000px; /* Adds perspective for 3D effect */
+            overflow: hidden; /* Prevent scrolling */
+        }
+
+        .leaf-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            transform-style: preserve-3d; /* Ensures child elements are in 3D space */
+            transition: transform 0.1s ease-out; /* Smooth transition for mouse movement */
+        }
+
+        .leaf {
+            width: 100%;
+            height: 100%;
+            background-color: #32CD32; /* Green color for the leaf */
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%); /* Triangle shape for the leaf */
+            transform-origin: bottom center;
+            animation: rotate 5s infinite linear;
+        }
+
+        @keyframes rotate {
+            0% {
+                transform: rotateZ(0deg);
+            }
+            100% {
+                transform: rotateZ(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="leaf-container">
+        <div class="leaf"></div>
+    </div>
+
+    <script>
+        const leafContainer = document.querySelector('.leaf-container');
+
+        // Add interactivity: Make the leaf rotate in 3D based on mouse movement
+        document.addEventListener('mousemove', (event) => {
+            // Calculate rotation values based on mouse position
+            const x = (window.innerWidth / 2 - event.clientX) / 20; // Horizontal rotation
+            const y = (window.innerHeight / 2 - event.clientY) / 20; // Vertical rotation
+
+            // Apply the rotation to the leaf container
+            leafContainer.style.transform = `rotateX(${y}deg) rotateY(${x}deg)`;
+        });
+
+        // Reset rotation when the mouse leaves the window
+        document.addEventListener('mouseleave', () => {
+            leafContainer.style.transform = 'rotateX(0deg) rotateY(0deg)';
+        });
+    </script>
+</body>
+</html> -->
