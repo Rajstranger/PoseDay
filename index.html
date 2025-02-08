@@ -205,13 +205,14 @@
                 element.classList.remove('dragging'); // Remove class to reset z-index
             };
 
+            // Mouse events
             element.addEventListener('mousedown', startDrag);
-            element.addEventListener('touchstart', startDrag, { passive: false });
-
             document.addEventListener('mousemove', drag);
-            document.addEventListener('touchmove', drag, { passive: false });
-
             document.addEventListener('mouseup', endDrag);
+
+            // Touch events
+            element.addEventListener('touchstart', startDrag, { passive: false });
+            document.addEventListener('touchmove', drag, { passive: false });
             document.addEventListener('touchend', endDrag);
         }
 
