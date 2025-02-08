@@ -119,6 +119,30 @@
         .transition-overlay.active {
             opacity: 1;
         }
+
+        /* Responsive styles for smaller screens */
+        @media (max-width: 768px) {
+            .leaves>div {
+                width: 90px; /* Smaller size for mobile */
+                height: 150px;
+            }
+
+            #lock {
+                width: 50px; /* Smaller lock for mobile */
+                height: 60px;
+                font-size: 30px;
+            }
+
+            .key {
+                width: 50px; /* Smaller key for mobile */
+                height: 50px;
+                font-size: 25px;
+            }
+
+            .message {
+                font-size: 18px; /* Smaller message for mobile */
+            }
+        }
     </style>
 </head>
 
@@ -156,26 +180,39 @@
             let isDragging = false;
             let offsetX, offsetY;
 
-            element.addEventListener('mousedown', (e) => {
+            const startDrag = (e) => {
                 isDragging = true;
-                offsetX = e.clientX - element.getBoundingClientRect().left;
-                offsetY = e.clientY - element.getBoundingClientRect().top;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                offsetX = clientX - element.getBoundingClientRect().left;
+                offsetY = clientY - element.getBoundingClientRect().top;
                 element.style.cursor = 'grabbing';
                 element.classList.add('dragging'); // Add class to bring key above lock and leaves
-            });
+            };
 
-            document.addEventListener('mousemove', (e) => {
+            const drag = (e) => {
                 if (isDragging) {
-                    element.style.left = `${e.clientX - offsetX}px`;
-                    element.style.top = `${e.clientY - offsetY}px`;
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                    element.style.left = `${clientX - offsetX}px`;
+                    element.style.top = `${clientY - offsetY}px`;
                 }
-            });
+            };
 
-            document.addEventListener('mouseup', () => {
+            const endDrag = () => {
                 isDragging = false;
                 element.style.cursor = 'grab';
                 element.classList.remove('dragging'); // Remove class to reset z-index
-            });
+            };
+
+            element.addEventListener('mousedown', startDrag);
+            element.addEventListener('touchstart', startDrag, { passive: false });
+
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('touchmove', drag, { passive: false });
+
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchend', endDrag);
         }
 
         // Function to calculate the number of leaves needed to cover the screen
@@ -303,82 +340,19 @@
                     }
                 }
             });
+
+            key.addEventListener('touchend', () => {
+                if (isKeyOverLock(key, lock)) {
+                    if (key.dataset.correct) {
+                        unlockLock(lock);
+                        showMessage('Lock unlocked!');
+                        openNewPage(); // Open the new page with animation
+                    } else {
+                        showMessage('Key is wrong!');
+                    }
+                }
+            });
         });
     </script>
 </body>
-
 </html>
-
-
-
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Tree Leaf Animation</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #87CEEB; /* Sky blue background */
-            perspective: 1000px; /* Adds perspective for 3D effect */
-            overflow: hidden; /* Prevent scrolling */
-        }
-
-        .leaf-container {
-            position: relative;
-            width: 100px;
-            height: 100px;
-            transform-style: preserve-3d; /* Ensures child elements are in 3D space */
-            transition: transform 0.1s ease-out; /* Smooth transition for mouse movement */
-        }
-
-        .leaf {
-            width: 100%;
-            height: 100%;
-            background-color: #32CD32; /* Green color for the leaf */
-            clip-path: polygon(50% 0%, 0% 100%, 100% 100%); /* Triangle shape for the leaf */
-            transform-origin: bottom center;
-            animation: rotate 5s infinite linear;
-        }
-
-        @keyframes rotate {
-            0% {
-                transform: rotateZ(0deg);
-            }
-            100% {
-                transform: rotateZ(360deg);
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="leaf-container">
-        <div class="leaf"></div>
-    </div>
-
-    <script>
-        const leafContainer = document.querySelector('.leaf-container');
-
-        // Add interactivity: Make the leaf rotate in 3D based on mouse movement
-        document.addEventListener('mousemove', (event) => {
-            // Calculate rotation values based on mouse position
-            const x = (window.innerWidth / 2 - event.clientX) / 20; // Horizontal rotation
-            const y = (window.innerHeight / 2 - event.clientY) / 20; // Vertical rotation
-
-            // Apply the rotation to the leaf container
-            leafContainer.style.transform = `rotateX(${y}deg) rotateY(${x}deg)`;
-        });
-
-        // Reset rotation when the mouse leaves the window
-        document.addEventListener('mouseleave', () => {
-            leafContainer.style.transform = 'rotateX(0deg) rotateY(0deg)';
-        });
-    </script>
-</body>
-</html> -->
